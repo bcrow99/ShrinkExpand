@@ -42,6 +42,7 @@ public class ResizeMapper
 		return dst;
 	}
 	
+	// These functions accept arbitrary dimensions.
 	public static int [] resizeX(int src[], int xdim, int new_xdim)
 	{
 		int ydim = src.length / xdim;
@@ -67,11 +68,9 @@ public class ResizeMapper
 		    	for(int j = 0; j < number_of_segments - 1; j++)
 		    	{
 		    	    for(int k = start; k < stop; k++)
-		    	    {
-		    	        dst[m++] = src[k];
-		    	        start   += segment_length;
-		    	        stop     = start + segment_length - 1;
-		    	    }
+		    	        dst[m++] = src[k];   
+		    	    start   += segment_length;
+	    	        stop     = start + segment_length - 1;
 		    	}
 		    }
 		}
@@ -112,6 +111,7 @@ public class ResizeMapper
 		}
 		else if(new_ydim < ydim)
 		{
+			
 			int delta              = new_ydim - ydim;
 		    int number_of_segments = delta + 1;
 		    int segment_length     = ydim / number_of_segments;
@@ -124,7 +124,7 @@ public class ResizeMapper
 		    	
 		    	for(int j = 0; j < number_of_segments - 1; j++)
 		    	{
-		    	    for(int k = start; k < stop; k++) 
+		    	    for(int k = start; k < stop; k += xdim) 
 		    	    	dst[m++] = src[k];
 		    	    start = stop + xdim;
 		    	    stop  = start + segment_length * xdim - xdim;
@@ -145,10 +145,10 @@ public class ResizeMapper
 		    	
 		    	for(int j = 0; j < number_of_segments - 1; j++)
 		    	{
-		    	    for(int k = start; k < stop; k++) 
+		    	    for(int k = start; k < stop; k += xdim) 
 		    	    	dst[m++] = src[k];
-		    	    dst[m++] = (src[stop] + src[stop + xdim]) / 2;
-		    	    start = stop + xdim;
+		    	    dst[m++] = (src[stop] + src[stop - xdim]) / 2;
+		    	    start = stop;
 		    	    stop  = start + segment_length * xdim; 
 		    	}
 		    }
