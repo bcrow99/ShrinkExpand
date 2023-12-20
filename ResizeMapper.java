@@ -568,5 +568,18 @@ public class ResizeMapper
 	    	return number_unpacked;
 	    }
 	    
-	    
+	    public static long[] getUnaryCode(int n)
+	    {
+	        long [] code         = new long[n];
+	       
+	        code[0] = 0;
+	        
+	        long addend = 1;
+		    for(int i = 1; i < n; i++)
+		    {
+		    	code[i] = code[i - 1] + addend;
+		    	addend *= 2;
+		    }
+	        return code;
+	    }
 }
