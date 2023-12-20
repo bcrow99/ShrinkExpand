@@ -126,21 +126,6 @@ public class ErrorAnalyzer
 		            System.exit(1);
 		        }
 			    
-		        /*
-		        for(int i = 0; i < xdim * ydim; i++)
-				{
-			        alpha[i] = (original_pixel[i] >> 24) & 0xff;
-				    blue[i]  = (original_pixel[i] >> 16) & 0xff;
-				    green[i] = (original_pixel[i] >> 8) & 0xff; 
-		            red[i]   = original_pixel[i] & 0xff; 
-		            
-		            shifted_blue[i]  = blue[i] >> pixel_shift;
-		            shifted_green[i] = green[i] >> pixel_shift;
-		            shifted_red[i]   = red[i] >> pixel_shift;
-		            
-		            
-				}
-				*/
 		        
 		        int shift = 16;
 		        for(int i = 0; i < 3; i++)
@@ -326,6 +311,7 @@ public class ErrorAnalyzer
 		        int [] channel         = (int [])channel_list.get(i);
 		        int [] shifted_channel = (int [])shifted_channel_list.get(i);
 		        double [][] error      = (double [][])error_list.get(i);
+		       
 		            
 		        for(int j = 0; j < ydim; j++)
 			    {
@@ -343,6 +329,10 @@ public class ErrorAnalyzer
 		    	 new_pixel[i] = 0;
 		
 		     shift = 16;
+		     double [][] quantized_error = new double[ydim][xdim];
+		     int total_zipped_bytes = 0;
+		     byte [] zipped_bytes   = new byte[xdim * ydim];
+		     byte [] error_bytes    = new byte[xdim * ydim];
 		     for(int i = 0; i < 3; i++)
 		     {
 		        int [] shifted_channel = (int [])shifted_channel_list.get(i);
@@ -353,6 +343,7 @@ public class ErrorAnalyzer
 			    	for(int k = 0; k < xdim; k++)
 			    	{
 			    		double current_error = error[j][k] * (double)correction / 10.;
+			    		quantized_error[j][k] = current_error;
 			    		double value         = shifted_channel[j * xdim + k] << pixel_shift;
 			    		value               += current_error;
 			    		new_pixel[j * xdim + k] |= (int)(value) << shift;	
@@ -361,21 +352,23 @@ public class ErrorAnalyzer
 			    }
 		        shift -= 8;
 			}
-		    
-		    /*
-			 byte [] zipped_bytes = new byte[expanded_xdim * expanded_ydim];
-			 Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);	
-		     deflater.setInput(expanded_error);
-		     deflater.finish();
-		     int zipped_byte_length = deflater.deflate(zipped_bytes);
-		     deflater.end();	    	
-		    	
-		    	
-		     double zipped_length = zipped_byte_length;
-		     double zipped_rate   = zipped_length / (expanded_xdim * expanded_ydim);
-		    	
-		     System.out.println("The zipped compression rate for the error is " + String.format("%.2f", zipped_rate));
-			*/ 
+		    int m = 0;
+		    for(int j = 0; j < ydim; j++)
+			   for(int k = 0; k < xdim; k++)
+			        error_bytes[m++] = (byte)quantized_error[j][k];
+		    Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);	
+			deflater.setInput(error_bytes);
+			deflater.finish();
+			    
+			int zipped_length = deflater.deflate(zipped_bytes);
+			total_zipped_bytes += zipped_length;
+			deflater.end();
+			    
+			double zipped_rate   = total_zipped_bytes;
+		    zipped_rate        /= xdim * ydim * 3;
+		    System.out.println("The zipped compression rate for the error is " + String.format("%.2f", zipped_rate));
+		    System.out.println();
+		     
 			 for(int i = 0; i < xdim; i++)
 			 {
 			     for(int j = 0; j < ydim; j++)
