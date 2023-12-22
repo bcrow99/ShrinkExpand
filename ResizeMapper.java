@@ -185,6 +185,77 @@ public class ResizeMapper
 		return dst;
 	}
 	
+	public static ArrayList getColumnList(int [] src, int xdim, int ydim, int interval)
+    {
+    	ArrayList column_list = new ArrayList();
+    	for(int j = interval - 1; j < xdim; j += interval)
+        {
+        	int [] column = new int[ydim];
+        	int k = 0;
+            for(int i = 0; i < ydim; i++)
+                column[k++] = src[i * xdim + j]	;
+            column_list.add(column);
+        }
+    	return column_list;
+    }
+   
+	public static ArrayList getRowList(int [] src, int xdim, int ydim, int interval)
+    {
+    	ArrayList row_list = new ArrayList();
+    	
+    	for(int i = interval - 1; i < ydim; i += interval)
+        {
+    		int [] row = new int[xdim];
+    		for(int j = 0; j < xdim; j++)
+        	    row[j] = src[i * xdim + j];      
+            row_list.add(row);
+        }
+    	return row_list;
+    }
+   
+	
+	public static ArrayList resizeDown(int src[], int xdim, int new_xdim, int new_ydim)
+	{
+		
+		ArrayList resize_list = new ArrayList();
+		
+		
+	    int ydim                = src.length / xdim;
+	    
+	    int delta               = xdim - new_xdim;
+	    int number_of_segments  = delta + 1;
+	    int interval            = xdim / number_of_segments;
+	    ArrayList column_list = ResizeMapper.getColumnList(src, xdim, ydim, interval);
+		int [] tmp = resizeX(src, xdim, new_xdim);
+		
+		delta               = ydim - new_ydim;
+	    number_of_segments  = delta + 1;
+	    interval            = ydim / number_of_segments;
+	    ArrayList row_list = ResizeMapper.getRowList(tmp, new_xdim, ydim, interval);
+		int [] dst = resizeY(tmp, new_xdim, new_ydim);
+		
+		resize_list.add(dst);
+		resize_list.add(column_list);
+		resize_list.add(row_list);
+		
+		return resize_list;
+	}
+	
+	public static int [] resizeUp(ArrayList src_list, int xdim, int new_xdim, int new_ydim)
+	{
+		int [] src            = (int [])src_list.get(0);
+		ArrayList column_list = (ArrayList)src_list.get(1);
+		ArrayList row_list    = (ArrayList)src_list.get(2);
+		
+	    int ydim                = src.length / xdim;
+	    
+		int [] tmp = resizeY(src, ydim, new_ydim);
+		
+		int [] dst = resizeX(tmp, xdim, new_xdim);
+		
+		return dst;
+	}
+	
 	public static int [] resize(int src[], int xdim, int new_xdim, int new_ydim)
 	{
 		int [] tmp = resizeX(src, xdim, new_xdim);
@@ -567,20 +638,7 @@ public class ResizeMapper
 	    	return number_unpacked;
 	    }
 	    
-	    public static ArrayList getColumnList(int [] src, int xdim, int ydim, int interval)
-	    {
-	    	ArrayList column_list = new ArrayList();
-	    	for(int j = interval - 1; j < xdim; j += interval)
-            {
-            	int [] column = new int[ydim];
-            	int k = 0;
-	            for(int i = 0; i < ydim; i++)
-	                column[k++] = src[i * xdim + j]	;
-	            column_list.add(column);
-            }
-	    	return column_list;
-	    }
-	   
+	    
 	    public static long[] getUnaryCode(int n)
 	    {
 	        long [] code         = new long[n];
