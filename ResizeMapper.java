@@ -19,7 +19,6 @@ public class ResizeMapper
 	    return dst;
 	}
 	
-	
 	public static int [] shrinkY(int [] src, int xdim)
 	{
 		int ydim          = src.length / xdim;
@@ -568,6 +567,20 @@ public class ResizeMapper
 	    	return number_unpacked;
 	    }
 	    
+	    public static ArrayList getColumnList(int [] src, int xdim, int ydim, int interval)
+	    {
+	    	ArrayList column_list = new ArrayList();
+	    	for(int j = interval - 1; j < xdim; j += interval)
+            {
+            	int [] column = new int[ydim];
+            	int k = 0;
+	            for(int i = 0; i < ydim; i++)
+	                column[k++] = src[i * xdim + j]	;
+	            column_list.add(column);
+            }
+	    	return column_list;
+	    }
+	   
 	    public static long[] getUnaryCode(int n)
 	    {
 	        long [] code         = new long[n];
@@ -582,4 +595,8 @@ public class ResizeMapper
 		    }
 	        return code;
 	    }
+	    
+	    
+	    
+	    
 }
