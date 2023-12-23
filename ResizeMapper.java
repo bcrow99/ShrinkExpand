@@ -243,16 +243,37 @@ public class ResizeMapper
 	
 	public static int [] resizeUp(ArrayList src_list, int xdim, int new_xdim, int new_ydim)
 	{
-		int [] src            = (int [])src_list.get(0);
-		ArrayList column_list = (ArrayList)src_list.get(1);
+		int [] src = (int [])src_list.get(0);
+		int ydim   = src.length / xdim;
+		int [] tmp = resizeY(src, xdim, new_ydim);
+		int delta              = new_ydim - ydim;
+		int number_of_segments = delta + 1;
+		int interval           = new_ydim / number_of_segments;
 		ArrayList row_list    = (ArrayList)src_list.get(2);
-		
-	    int ydim                = src.length / xdim;
-	    
-		int [] tmp = resizeY(src, ydim, new_ydim);
+		int k = 0;
+		for(int i = interval - 1; i < new_ydim; i += interval)
+        {
+    		int [] row = (int [])row_list.get(k);
+    		k++;
+    	
+    		for(int j = 0; j < xdim; j++)
+        	    tmp[i * xdim + j] = row[j];  
+        }
 		
 		int [] dst = resizeX(tmp, xdim, new_xdim);
-		
+		delta                 = new_xdim - xdim;
+		number_of_segments    = delta + 1;
+		interval              = new_xdim / number_of_segments;
+		ArrayList column_list = (ArrayList)src_list.get(1);
+		k = 0;
+		for(int j = interval - 1; j < new_xdim; j += interval)
+        {
+        	int [] column = (int [])column_list.get(k);
+        	k++;
+        	
+            for(int i = 0; i < ydim; i++)
+                dst[i * new_xdim + j] = column[i]; 
+        }
 		return dst;
 	}
 	
