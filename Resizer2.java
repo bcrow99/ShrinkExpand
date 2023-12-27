@@ -543,15 +543,60 @@ public class Resizer2
 			    	channel_compressed_length[j] = DeltaMapper.compressZeroStrings(string, channel_length[j], compression_string);
 			    total_bits += channel_compressed_length[j];
 			}
-			
 			int total_bytes = total_bits / 8;
 			double compression_rate = total_bytes;
 			compression_rate /= xdim * ydim * 3;
-			System.out.println("Compression rate is " + String.format("%.4f", compression_rate));
+			System.out.println("Compression rate for paeth deltas is " + String.format("%.4f", compression_rate));
+			//System.out.println();
+			
+			total_bits = 0;
+			for(int i = 0; i < 3; i++)
+			{
+				int j = channel_id[i];
+				
+				int [] quantized_channel = (int[])quantized_channel_list.get(j);
+				
+				ArrayList result = getDeltasFromValues4(quantized_channel, new_xdim, new_ydim);
+                int []    delta  = (int [])result.get(1);
+                delta_list.add(delta);
+				
+				ArrayList histogram_list = DeltaMapper.getHistogram(delta);
+			    channel_delta_min[j]     = (int)histogram_list.get(0);
+			    int [] histogram         = (int[])histogram_list.get(1);
+				int [] string_table = DeltaMapper.getRankTable(histogram);
+				table_list.add(string_table);
+				
+				for(int k = 1; k < delta.length; k++)
+					delta[k] -= channel_delta_min[j];
+				byte [] string         = new byte[xdim * ydim * 2];
+				byte [] compression_string = new byte[xdim * ydim * 2];
+				channel_length[j]      = DeltaMapper.packStrings2(delta, string_table, string);
+				
+				double zero_one_ratio = new_xdim * new_ydim;
+		        if(histogram.length > 1)
+		        {
+					int min_value = Integer.MAX_VALUE;
+					for(int k = 0; k < histogram.length; k++)
+						 if(histogram[k] < min_value)
+							min_value = histogram[k];
+					zero_one_ratio -= min_value;
+		        }	
+			    zero_one_ratio  /= channel_length[j];
+			    
+			    if(zero_one_ratio > .5)
+					channel_compressed_length[j] = DeltaMapper.compressZeroStrings(string, channel_length[j], compression_string);
+			    else
+			    	channel_compressed_length[j] = DeltaMapper.compressZeroStrings(string, channel_length[j], compression_string);
+			    total_bits += channel_compressed_length[j];
+			}
+			total_bytes = total_bits / 8;
+			compression_rate = total_bytes;
+			compression_rate /= xdim * ydim * 3;
+			System.out.println("Compression rate for ideal deltas is " + String.format("%.4f", compression_rate));
 			System.out.println();
 			
-			 for(int i = 0; i < 3; i++)
-		     {
+			for(int i = 0; i < 3; i++)
+		    {
 		         int [] channel = (int [])channel_list.get(i);
 		         int [] quantized_channel = (int [])quantized_channel_list.get(i);
 		         int [] resized_channel   = new int[xdim * ydim];
@@ -568,9 +613,9 @@ public class Resizer2
 		        	error[j]             = channel[j] - resized_channel[j]; 
 		        
 		        quantized_channel_list.set(i, resized_channel);
-		     } 
+		    } 
 		     
-		     for(int i = 0; i < xdim * ydim; i++)
+		    for(int i = 0; i < xdim * ydim; i++)
 		    	 new_pixel[i] = 0;
 		     int shift = 16;
 		     for(int i = 0; i < 3; i++)
@@ -637,4 +682,99 @@ public class Resizer2
 			image_canvas.repaint();
 		}
 	}
+	
+	// Get an ideal delta set and a map of which pixels are used.
+    public static ArrayList getDeltasFromValues4(int src[], int xdim, int ydim)
+    {
+        int[]  dst        = new int[xdim * ydim];
+        int[] direction   = new int[xdim * ydim];
+        
+        int init_value     = src[0];
+        int value          = init_value;
+        int delta          = 0;
+        int sum            = 0;
+        
+        int k = 0;
+        for(int i = 0; i < ydim; i++)
+        {
+        	if(i == 0)
+        	{
+                for(int j = 0; j < xdim; j++)
+                {
+            	    if(j == 0)
+            	    {
+            		    // Setting the first value to 3 to mark the delta type ideal.
+            			dst[k]       = 3;
+            			direction[k] = 0;
+            			k++;
+            	    }
+            		else
+            		{
+            			// We don't have an upper or upper diagonal delta to check
+            			// in the first row, so we just use horizontal deltas.
+            		    delta        = src[k] - value;
+                        value       += delta;
+                        dst[k]       = delta;
+                        direction[k] = 0;
+                        sum         += Math.abs(delta);
+                        k++;
+            		}
+            	}
+            }
+        	else
+        	{
+        		for(int j = 0; j < xdim; j++)
+                {
+            	    if(j == 0)
+            	    {
+            	    	// We dont have a horizontal delta or diagonal delta to check,
+            	    	// so we just use a vertical delta, and reset our init value.
+            	    	delta        = src[k] - init_value;
+            	    	init_value   = src[k];
+            	    	dst[k]       = delta;
+            	    	direction[k] = 1;
+            	    	sum          += Math.abs(delta);
+            	    	k++;
+            	    }
+            	    else
+            	    {
+            	    	// Now we have a set of 3 possible pixels to use.
+            	    	int a = src[k] - src[k - 1];
+            	    	int b = src[k] - src[k - xdim];
+            	    	int c = src[k] - src[k - xdim - 1];
+            	    	
+            	    	if(Math.abs(a) <= Math.abs(b) && Math.abs(a) <= Math.abs(c))
+            	    	{
+            	    		delta        = a;
+            	    	    dst[k]       = delta;
+            	    	    direction[k] = 0;
+            	    	    sum         += Math.abs(delta);
+            	    	    k++;
+            	    	}
+            	    	else if(Math.abs(b)<= Math.abs(c))
+            	    	{
+            	    		delta        = b;
+            	    		dst[k]       = delta;
+            	    	    direction[k] = 1;
+            	    	    sum         += Math.abs(delta);
+            	    	    k++;
+            	    	}
+            	    	else
+            	    	{
+            	    		delta        = c;
+            	    		dst[k]       = delta;
+            	    	    direction[k] = 2;
+            	    	    sum         += Math.abs(delta);
+            	    	    k++;	
+            	    	}
+            	    }
+                }
+        	}
+        }
+        ArrayList result = new ArrayList();
+        result.add(sum);
+        result.add(dst);
+        result.add(direction);
+        return result;
+    }
 }
